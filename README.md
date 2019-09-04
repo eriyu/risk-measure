@@ -1,27 +1,24 @@
-# RiskMeasure
+# 富邦產險_風險評估系統 RiskMeasure
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 7.3.9.
 
-## Development server
+## 功能需求
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+1. 使用者可以上傳圖片當底圖
+1. 使用者可以在圖片上面畫線、框、箭頭、文字
+1. 可以分圖層（底圖、使用者作畫的內容）顯示
+1. 編輯完的內容另存成圖片
 
-## Code scaffolding
+## KONVA
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+https://github.com/konvajs/konva
 
-## Build
+```
+npm install konva --save
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+```
+// typescript
+import * as Konva from 'konva';
+```
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
