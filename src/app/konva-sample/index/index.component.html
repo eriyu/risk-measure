@@ -1,22 +1,36 @@
-<div class="file-select">
-  <input type="file" (change)="onFileSelected($event)" accept="image/*">
-</div>
-<div class="editor-mode" *ngIf="imageLayerLoad">
-  EditorMode:
+<section>
+  <div class="file-select">
+    <label class="pure-button">
+      <input style="display:none;" type="file" (change)="onFileSelected($event)" accept="image/*">
+      <i class="fas fa-image"></i> 上傳圖片
+    </label>
+  </div>
+  <div class="editor-mode">
+    <!-- EditorMode:
   <select [ngModel]="selectedMode" (ngModelChange)="onEditorModeSelected($event)">
     <option [value]="EditorMode.Brush">筆刷</option>
     <option [value]="EditorMode.Text">文字</option>
     <option [value]="EditorMode.Arrow">箭頭</option>
-  </select>
-</div>
-<div class="layer-choice" *ngIf="imageLayerLoad">
-  分圖層顯示:
-  <select [ngModel]="selectedLayer" (ngModelChange)="onLayerSelected($event)">
-    <option [value]="LayerMode.Both">全部</option>
-    <option [value]="LayerMode.Image">底圖</option>
-    <option [value]="LayerMode.Editor">使用者作畫的內容</option>
-  </select>
-  &nbsp;
-  <button (click)="saveAsImage()">另存為圖片</button>
-</div>
-<div id="container"></div>
+  </select> -->
+    <div class="radio-toolbar" *ngIf="imageLayerLoad">
+      <ng-container *ngFor="let tool of tools">
+        <input type="radio" name="radioToolbar"
+          [value]="tool.mode" [(ngModel)]="selectedTool">
+        <label class="pure-button" [ngClass]="{'pure-button-primary': selectedTool === tool.mode}">{{tool.name}}</label>
+      </ng-container>
+    </div>
+  </div>
+  <div class="layer-choice" *ngIf="imageLayerLoad">
+    <span>分圖層顯示：</span>
+    <ng-container *ngFor="let layer of layers">
+      <label class="pure-checkbox layer-choice__item">
+        <input type="checkbox" [(ngModel)]="layer.checked">
+        {{layer.name}}
+      </label>
+    </ng-container>
+    <button class="pure-button layer-choice__item" (click)="saveAsImage()">
+      <i class="fas fa-download"></i> 另存為圖片
+    </button>
+  </div>
+  <div id="container"></div>
+</section>

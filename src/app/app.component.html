@@ -1,18 +1,21 @@
-<div style="text-align:center">
-  <h1>
-    富邦產險_風險評估系統
-  </h1>
+<div class="page">
+  <div style="text-align:center">
+    <h1>
+      風險評估系統
+    </h1>
+  </div>
+  <h2>功能需求</h2>
+  <ol>
+    <li>使用者可以上傳圖片當底圖 </li>
+    <li>使用者可以在圖片上面畫線、框、箭頭、文字</li>
+    <li>可以分圖層（底圖、使用者作畫的內容）顯示</li>
+    <li>編輯完的內容另存成圖片</li>
+  </ol>
+  <p><a href="https://konvajs.org/" target="_blank">使用 KONVA(MIT License)</a></p>
+  <pre>
+        npm install konva --save
+        import Konva from 'konva';
+      </pre>
+  <router-outlet></router-outlet>
+
 </div>
-<h2>功能需求</h2>
-<ol>
-  <li>使用者可以上傳圖片當底圖 -> OK </li>
-  <li>使用者可以在圖片上面畫線、框、箭頭、文字</li>
-  <li>可以分圖層（底圖、使用者作畫的內容）顯示</li>
-  <li>編輯完的內容另存成圖片</li>
-</ol>
-<p><a href="https://konvajs.org/" target="_blank">使用 KONVA(MIT License)</a></p>
-<pre>
-  npm install konva --save
-  import Konva from 'konva';
-</pre>
-<router-outlet></router-outlet>
