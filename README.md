@@ -19,6 +19,6 @@ npm install konva --save
 
 ```
 // typescript
-import * as Konva from 'konva';
+import Konva from 'konva';
 ```
 
