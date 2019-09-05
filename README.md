@@ -9,7 +9,7 @@ This project was generated with [Angular CLI](https://github.com/angular/angular
 1. 可以分圖層（底圖、使用者作畫的內容）顯示
 1. 編輯完的內容另存成圖片
 
-## KONVA
+## KONVA (MIT)
 
 https://github.com/konvajs/konva
 

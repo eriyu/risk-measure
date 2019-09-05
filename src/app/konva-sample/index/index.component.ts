@@ -1,6 +1,7 @@
 import { Component, OnInit, NgZone } from '@angular/core';
 import Konva from 'konva';
 import * as _ from 'lodash';
+import * as moment from 'moment';
 
 enum ToolMode {
   Line,
@@ -65,6 +66,13 @@ export class IndexComponent implements OnInit {
     this.stage.add(this.imageLayer);
     this.stage.add(this.editorLayer);
     this.addStageListener();
+    document.addEventListener('keydown', (e) => {
+      if (e.keyCode === 8 && this.selectNode) {
+        this.stage.find('Transformer').destroy();
+        this.selectNode.destroy();
+        this.editorLayer.draw();
+      }
+    });
   }
 
   addStageListener() {
@@ -98,8 +106,48 @@ export class IndexComponent implements OnInit {
       }
     });
 
-    this.stage.on('mousemove touchmove', () => {
+    this.stage.on('mousemove touchmove', (e) => {
+      if (e.target instanceof Konva.Image) {
+        document.body.style.cursor = 'crosshair';
+      } else {
+        document.body.style.cursor = 'default';
+      }
       this.updateDragTrack();
+    });
+
+    this.stage.on('click tap', (e) => {
+      if (e.target instanceof Konva.Image) {
+        const container = document.querySelector('#container');
+        this.stage.find('Transformer').destroy();
+        // this.selectNode = null;
+        if (this.selectNode instanceof Konva.Text) {
+          const textArea = document.querySelector('textarea');
+          if (textArea) {
+            this.selectNode.text(textArea.value);
+            this.editorLayer.draw();
+            container.removeChild(textArea);
+          }
+        }
+      }
+    });
+  }
+
+  addNodeListener(node: Konva.Node) {
+    node.on('mouseover', () => {
+      document.body.style.cursor = 'pointer';
+    });
+    node.on('mouseout', () => {
+      document.body.style.cursor = 'default';
+    });
+    node.on('click tap', (e) => {
+      // clear all Transformer on stage
+      this.stage.find('Transformer').destroy();
+      this.selectNode = node;
+      node.draggable(true);
+      const tr = new Konva.Transformer();
+      this.editorLayer.add(tr);
+      tr.attachTo(e.target);
+      this.editorLayer.draw();
     });
   }
 
@@ -146,6 +194,7 @@ export class IndexComponent implements OnInit {
       stroke: 'black',
       strokeWidth: 2
     });
+    this.addNodeListener(node);
     this.editorLayer.add(node);
     this.stage.batchDraw();
   }
@@ -159,19 +208,24 @@ export class IndexComponent implements OnInit {
       stroke: 'black',
       strokeWidth: 2
     });
+    this.addNodeListener(node);
     this.editorLayer.add(node);
     this.stage.batchDraw();
   }
 
   createLineNode() {
+    this.dragTrack = [
+      _.first(this.dragTrack),
+      _.last(this.dragTrack),
+    ];
     const trackPoints = _.flatMap(this.dragTrack, track => {
       return [track.x , track.y];
     });
     const node = new Konva.Line({
       points: trackPoints,
-      stroke: 'black',
-      tension: 0
+      stroke: 'black'
     });
+    this.addNodeListener(node);
     this.editorLayer.add(node);
     this.stage.batchDraw();
   }
@@ -187,29 +241,19 @@ export class IndexComponent implements OnInit {
     const node = new Konva.Arrow({
       points: trackPoints,
       stroke: 'black',
-      tension: 0
+      fill: 'black'
     });
+    this.addNodeListener(node);
     this.editorLayer.add(node);
     this.stage.batchDraw();
   }
 
-  createTextNode() {
+  addTextNodeListener(textNode: Konva.Text) {
     const container = document.querySelector('#container');
-    const shape = this.getShapeInfo(this.dragTrack);
-    const textNode = new Konva.Text({
-      text: 'Input text here',
-      x: shape.x1,
-      y: shape.y1,
-      fontSize: 20,
-      width: shape.x2 - shape.x1,
-      height: shape.y2 - shape.y1
-    });
-    this.editorLayer.add(textNode);
-    this.editorLayer.batchDraw();
-
     textNode.on('dblclick', (e) => {
       if (!this.isPaint) {
         const node = e.currentTarget as Konva.Text;
+
         // create textarea and style it
         const textElement = document.createElement('textarea');
         container.appendChild(textElement);
@@ -221,18 +265,24 @@ export class IndexComponent implements OnInit {
         textElement.style.height = node.height() + 'px';
         textElement.style.fontSize = 20 + 'px';
         textElement.focus();
-
-        textElement.addEventListener('keydown', (evt) => {
-            // hide on enter
-            if (evt.keyCode === 13 || evt.keyCode === 27) {
-                const textArea = evt.target as HTMLTextAreaElement;
-                node.text(textArea.value);
-                this.editorLayer.draw();
-                container.removeChild(textArea);
-            }
-        });
       }
     });
+  }
+
+  createTextNode() {
+    const shape = this.getShapeInfo(this.dragTrack);
+    const node = new Konva.Text({
+      text: 'Input text here',
+      x: shape.x1,
+      y: shape.y1,
+      fontSize: 20,
+      width: shape.x2 - shape.x1,
+      height: shape.y2 - shape.y1
+    });
+    this.addNodeListener(node);
+    this.addTextNodeListener(node);
+    this.editorLayer.add(node);
+    this.editorLayer.batchDraw();
   }
 
   resetContext() {
@@ -252,7 +302,8 @@ export class IndexComponent implements OnInit {
 
   saveAsImage() {
     const dataURL = this.stage.toDataURL();
-    this.downloadURI(dataURL, 'stage.png');
+    const dateString = moment().format('YYYYMMDDTHHmmssSSS');
+    this.downloadURI(dataURL, `stage_${dateString}.png`);
   }
 
   onFileSelected(event) {
@@ -276,6 +327,9 @@ export class IndexComponent implements OnInit {
 
   onToolSelected(selectedTool) {
     this.selectedTool = +selectedTool;
+    if (this.selectedTool === ToolMode.Select) {
+      this.isPaint = false;
+    }
   }
 
   /**
