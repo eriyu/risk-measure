@@ -1,35 +1,34 @@
 <section>
   <div class="file-select">
-    <label class="pure-button">
-      <input style="display:none;" type="file" (change)="onFileSelected($event)" accept="image/*">
-      <i class="fas fa-image"></i> 上傳圖片
+    <label class="pure-button ml10">
+      <input type="file" accept="image/*" style="display:none;" (change)="onFileSelected($event)">
+      <i class="fas fa-image"></i>
+      <span>&nbsp;上傳底圖</span>
     </label>
+    <button class="pure-button ml10" (click)="resetContext()">
+      <i class="fas fa-download"></i>
+      <span>&nbsp;重置畫布</span>
+    </button>
   </div>
-  <div class="editor-mode">
-    <!-- EditorMode:
-  <select [ngModel]="selectedMode" (ngModelChange)="onEditorModeSelected($event)">
-    <option [value]="EditorMode.Brush">筆刷</option>
-    <option [value]="EditorMode.Text">文字</option>
-    <option [value]="EditorMode.Arrow">箭頭</option>
-  </select> -->
-    <div class="radio-toolbar" *ngIf="imageLayerLoad">
-      <ng-container *ngFor="let tool of tools">
-        <input type="radio" name="radioToolbar"
-          [value]="tool.mode" [(ngModel)]="selectedTool">
-        <label class="pure-button" [ngClass]="{'pure-button-primary': selectedTool === tool.mode}">{{tool.name}}</label>
-      </ng-container>
-    </div>
+  <div class="pure-button-group" role="toolbar" *ngIf="imageLayerLoad">
+    <ng-container *ngFor="let tool of tools">
+      <button class="pure-button" [ngClass]="{'pure-button-primary': selectedTool === tool.mode}"
+        (click)="onToolSelected(tool.mode)">
+        <span>{{tool.name}}</span>
+      </button>
+    </ng-container>
   </div>
   <div class="layer-choice" *ngIf="imageLayerLoad">
     <span>分圖層顯示：</span>
     <ng-container *ngFor="let layer of layers">
-      <label class="pure-checkbox layer-choice__item">
-        <input type="checkbox" [(ngModel)]="layer.checked">
-        {{layer.name}}
+      <label class="pure-checkbox ml10">
+        <input type="checkbox" (change)="onLayerSelected(layer)" [checked]="layer.checked">
+        {{layer.label}}
       </label>
     </ng-container>
-    <button class="pure-button layer-choice__item" (click)="saveAsImage()">
-      <i class="fas fa-download"></i> 另存為圖片
+    <button class="pure-button ml10" (click)="saveAsImage()" [disabled]="isSaveAsImgDisabled()">
+      <i class="fas fa-download"></i>
+      <span>&nbsp;另存為圖片</span>
     </button>
   </div>
   <div id="container"></div>
