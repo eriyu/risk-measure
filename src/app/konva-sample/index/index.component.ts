@@ -68,10 +68,16 @@ export class IndexComponent implements OnInit {
     this.addStageListener();
     document.addEventListener('keydown', (e) => {
       if (e.keyCode === 8 && this.selectNode) {
-        this.stage.find('Transformer').destroy();
+        this.destroyTransformer();
         this.selectNode.destroy();
         this.editorLayer.draw();
       }
+    });
+  }
+
+  destroyTransformer() {
+    this.stage.find('Transformer').each(item => {
+      item.destroy();
     });
   }
 
@@ -118,7 +124,7 @@ export class IndexComponent implements OnInit {
     this.stage.on('click tap', (e) => {
       if (e.target instanceof Konva.Image) {
         const container = document.querySelector('#container');
-        this.stage.find('Transformer').destroy();
+        this.destroyTransformer();
         // this.selectNode = null;
         if (this.selectNode instanceof Konva.Text) {
           const textArea = document.querySelector('textarea');
@@ -141,7 +147,7 @@ export class IndexComponent implements OnInit {
     });
     node.on('click tap', (e) => {
       // clear all Transformer on stage
-      this.stage.find('Transformer').destroy();
+      this.destroyTransformer();
       this.selectNode = node;
       node.draggable(true);
       const tr = new Konva.Transformer();
@@ -327,9 +333,6 @@ export class IndexComponent implements OnInit {
 
   onToolSelected(selectedTool) {
     this.selectedTool = +selectedTool;
-    if (this.selectedTool === ToolMode.Select) {
-      this.isPaint = false;
-    }
   }
 
   /**
