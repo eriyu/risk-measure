@@ -1,4 +1,10 @@
-section>div {
+.top-block {
+  display: flex;
+  &>div {
+    margin-right: 30px;
+  }
+}
+.action-block>div {
   margin: 20px 0;
 }
 

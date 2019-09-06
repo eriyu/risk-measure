@@ -41,17 +41,16 @@ export class IndexComponent implements OnInit {
   ];
 
   dragTrack = [];
+  isMouseDown = false;
 
   stage: Konva.Stage;
   imageLayer: Konva.Layer;
   editorLayer: Konva.Layer;
   selectNode: Konva.Node;
+  tempNode: Konva.Node;
 
   imageLayerLoad = false;
   selectedTool =  ToolMode.Line;
-
-  isPaint = false;
-  lastLine;
 
 
   constructor(
@@ -70,8 +69,12 @@ export class IndexComponent implements OnInit {
       if (e.keyCode === 8 && this.selectNode) {
         this.destroyTransformer();
         this.selectNode.destroy();
-        this.editorLayer.draw();
+        this.editorLayer.batchDraw();
       }
+    });
+    const container = document.querySelector('#container');
+    container.addEventListener('mouseleave', () => {
+      document.body.style.cursor = 'default';
     });
   }
 
@@ -79,37 +82,56 @@ export class IndexComponent implements OnInit {
     this.stage.find('Transformer').each(item => {
       item.destroy();
     });
+    this.stage.batchDraw();
+  }
+
+  destroyTempNode() {
+    this.stage.find('.temp').each(item => {
+      item.destroy();
+    });
+    this.stage.batchDraw();
+  }
+
+  createNode(isDrawTemp = false) {
+    switch (this.selectedTool) {
+      case ToolMode.Line:
+        this.createLineNode(isDrawTemp);
+        break;
+      case ToolMode.Arrow:
+        this.createArrowNode(isDrawTemp);
+        break;
+      case ToolMode.Rect:
+        this.createRectNode(isDrawTemp);
+        break;
+      case ToolMode.Circle:
+        this.createCircleNode(isDrawTemp);
+        break;
+      case ToolMode.Text:
+        this.createTextNode(isDrawTemp);
+        break;
+    }
   }
 
   addStageListener() {
 
     this.stage.on('mousedown touchstart', () => {
+      this.isMouseDown = true;
       this.startDragTrack();
     });
 
-    this.stage.on('mouseup touchend', () => {
-      if (this.isPaint) {
-        switch (this.selectedTool) {
-          case ToolMode.Line:
-            this.createLineNode();
-            break;
-          case ToolMode.Arrow:
-            this.createArrowNode();
-            break;
-          case ToolMode.Rect:
-            this.createRectNode();
-            break;
-          case ToolMode.Circle:
-            this.createCircleNode();
-            break;
-          case ToolMode.Text:
-            this.createTextNode();
-            break;
-          default:
-            break;
+    this.stage.on('mouseup touchend', (e) => {
+      console.log('stage mouseup', this.getNowTimeString());
+      setTimeout(() => {
+        const noTransFormer = (this.stage.find('Transformer').length > 0) ? false : true;
+        if (this.isMouseDown) {
+          this.isMouseDown = false;
+          this.destroyTempNode();
+          if (noTransFormer) {
+            const isDrawTemp = false;
+            this.createNode(isDrawTemp);
+          }
         }
-        this.isPaint = false;
-      }
+      });
     });
 
     this.stage.on('mousemove touchmove', (e) => {
@@ -119,6 +141,14 @@ export class IndexComponent implements OnInit {
         document.body.style.cursor = 'default';
       }
       this.updateDragTrack();
+      if (
+        this.isMouseDown &&
+        e.target instanceof Konva.Image
+      ) {
+        this.destroyTempNode();
+        const isDrawTemp = true;
+        this.createNode(isDrawTemp);
+      }
     });
 
     this.stage.on('click tap', (e) => {
@@ -130,7 +160,7 @@ export class IndexComponent implements OnInit {
           const textArea = document.querySelector('textarea');
           if (textArea) {
             this.selectNode.text(textArea.value);
-            this.editorLayer.draw();
+            this.editorLayer.batchDraw();
             container.removeChild(textArea);
           }
         }
@@ -139,12 +169,11 @@ export class IndexComponent implements OnInit {
   }
 
   addNodeListener(node: Konva.Node) {
-    node.on('mouseover', () => {
-      document.body.style.cursor = 'pointer';
+
+    node.on('mouseup', (e) => {
+      console.log('node mouseup', this.getNowTimeString());
     });
-    node.on('mouseout', () => {
-      document.body.style.cursor = 'default';
-    });
+
     node.on('click tap', (e) => {
       // clear all Transformer on stage
       this.destroyTransformer();
@@ -153,14 +182,14 @@ export class IndexComponent implements OnInit {
       const tr = new Konva.Transformer();
       this.editorLayer.add(tr);
       tr.attachTo(e.target);
-      this.editorLayer.draw();
+      this.editorLayer.batchDraw();
+      console.log('node click', this.getNowTimeString());
     });
   }
 
   startDragTrack() {
     const pos = this.stage.getPointerPosition();
     this.dragTrack = [{x: pos.x, y: pos.y}];
-    this.isPaint = true;
   }
 
   updateDragTrack() {
@@ -190,7 +219,7 @@ export class IndexComponent implements OnInit {
     return ({x1: r1x, y1: r1y, x2: r2x, y2: r2y});
   }
 
-  createRectNode() {
+  createRectNode(isDrawTemp) {
     const shape = this.getShapeInfo(this.dragTrack);
     const node = new Konva.Rect({
       x: shape.x1,
@@ -200,12 +229,15 @@ export class IndexComponent implements OnInit {
       stroke: 'black',
       strokeWidth: 2
     });
+    if (isDrawTemp) {
+      node.name('temp');
+    }
     this.addNodeListener(node);
     this.editorLayer.add(node);
     this.stage.batchDraw();
   }
 
-  createCircleNode() {
+  createCircleNode(isDrawTemp) {
     const shape = this.getShapeInfo(this.dragTrack);
     const node = new Konva.Circle({
       x: shape.x1,
@@ -214,12 +246,15 @@ export class IndexComponent implements OnInit {
       stroke: 'black',
       strokeWidth: 2
     });
+    if (isDrawTemp) {
+      node.name('temp');
+    }
     this.addNodeListener(node);
     this.editorLayer.add(node);
     this.stage.batchDraw();
   }
 
-  createLineNode() {
+  createLineNode(isDrawTemp) {
     this.dragTrack = [
       _.first(this.dragTrack),
       _.last(this.dragTrack),
@@ -231,12 +266,17 @@ export class IndexComponent implements OnInit {
       points: trackPoints,
       stroke: 'black'
     });
-    this.addNodeListener(node);
-    this.editorLayer.add(node);
-    this.stage.batchDraw();
+    if (isDrawTemp) {
+      node.name('temp');
+    }
+    if (node.width() > 0) {
+      this.addNodeListener(node);
+      this.editorLayer.add(node);
+      this.stage.batchDraw();
+    }
   }
 
-  createArrowNode() {
+  createArrowNode(isDrawTemp) {
     this.dragTrack = [
       _.first(this.dragTrack),
       _.last(this.dragTrack),
@@ -249,46 +289,63 @@ export class IndexComponent implements OnInit {
       stroke: 'black',
       fill: 'black'
     });
-    this.addNodeListener(node);
-    this.editorLayer.add(node);
+    if (isDrawTemp) {
+      node.name('temp');
+    }
+    if (node.width() > 15) {
+      this.addNodeListener(node);
+      this.editorLayer.add(node);
+      this.stage.batchDraw();
+    }
+  }
+
+  createTextNode(isDrawTemp) {
+    const shape = this.getShapeInfo(this.dragTrack);
+    let nodeConfig = {
+      x: shape.x1,
+      y: shape.y1,
+      width: shape.x2 - shape.x1,
+      height: shape.y2 - shape.y1,
+    };
+    if (isDrawTemp) {
+      nodeConfig = Object.assign(nodeConfig, {
+        stroke: 'black',
+        name: 'temp',
+        dash: ([10, 5])
+      });
+      const rectNode = new Konva.Rect(nodeConfig);
+      this.addNodeListener(rectNode);
+      this.editorLayer.add(rectNode);
+    } else {
+      nodeConfig = Object.assign(nodeConfig, {
+        text: 'Input text here',
+        fontSize: 20
+      });
+      const textNode = new Konva.Text(nodeConfig);
+      this.addNodeListener(textNode);
+      this.addTextNodeListener(textNode);
+      this.editorLayer.add(textNode);
+    }
     this.stage.batchDraw();
   }
 
   addTextNodeListener(textNode: Konva.Text) {
     const container = document.querySelector('#container');
     textNode.on('dblclick', (e) => {
-      if (!this.isPaint) {
-        const node = e.currentTarget as Konva.Text;
+      const node = e.currentTarget as Konva.Text;
 
-        // create textarea and style it
-        const textElement = document.createElement('textarea');
-        container.appendChild(textElement);
-        textElement.value = node.text();
-        textElement.style.position = 'absolute';
-        textElement.style.top = node.y() + 'px',
-        textElement.style.left = node.x() + 'px',
-        textElement.style.width = node.width() + 'px';
-        textElement.style.height = node.height() + 'px';
-        textElement.style.fontSize = 20 + 'px';
-        textElement.focus();
-      }
+      // create textarea and style it
+      const textElement = document.createElement('textarea');
+      container.appendChild(textElement);
+      textElement.value = node.text();
+      textElement.style.position = 'absolute';
+      textElement.style.top = node.y() + 'px',
+      textElement.style.left = node.x() + 'px',
+      textElement.style.width = node.width() + 'px';
+      textElement.style.height = node.height() + 'px';
+      textElement.style.fontSize = 20 + 'px';
+      textElement.focus();
     });
-  }
-
-  createTextNode() {
-    const shape = this.getShapeInfo(this.dragTrack);
-    const node = new Konva.Text({
-      text: 'Input text here',
-      x: shape.x1,
-      y: shape.y1,
-      fontSize: 20,
-      width: shape.x2 - shape.x1,
-      height: shape.y2 - shape.y1
-    });
-    this.addNodeListener(node);
-    this.addTextNodeListener(node);
-    this.editorLayer.add(node);
-    this.editorLayer.batchDraw();
   }
 
   resetContext() {
@@ -308,8 +365,11 @@ export class IndexComponent implements OnInit {
 
   saveAsImage() {
     const dataURL = this.stage.toDataURL();
-    const dateString = moment().format('YYYYMMDDTHHmmssSSS');
-    this.downloadURI(dataURL, `stage_${dateString}.png`);
+    this.downloadURI(dataURL, `stage_${this.getNowTimeString()}.png`);
+  }
+
+  getNowTimeString() {
+    return moment().format('YYYYMMDDTHHmmssSSS');
   }
 
   onFileSelected(event) {
@@ -325,7 +385,7 @@ export class IndexComponent implements OnInit {
           });
           this.imageLayerLoad = true;
           this.imageLayer.add(image);
-          this.imageLayer.draw();
+          this.imageLayer.batchDraw();
         });
       };
     }
