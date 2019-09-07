@@ -1,4 +1,4 @@
-import { Component, OnInit, NgZone } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import Konva from 'konva';
 import * as _ from 'lodash';
 import * as moment from 'moment';
@@ -34,27 +34,25 @@ export class IndexComponent implements OnInit {
 
   tools = [
     {mode: ToolMode.Line, name: '畫線' },
+    {mode: ToolMode.Arrow, name: '箭頭' },
     {mode: ToolMode.Rect, name: '畫框' },
     {mode: ToolMode.Circle, name: '畫圓' },
-    {mode: ToolMode.Arrow, name: '箭頭' },
     {mode: ToolMode.Text, name: '文字' },
   ];
 
   dragTrack = [];
   isMouseDown = false;
+  isDrawTemp = false;
 
   stage: Konva.Stage;
   imageLayer: Konva.Layer;
   editorLayer: Konva.Layer;
   selectNode: Konva.Node;
-  tempNode: Konva.Node;
 
   imageLayerLoad = false;
   selectedTool =  ToolMode.Line;
 
-
   constructor(
-    private ngZone: NgZone
   ) {
   }
 
@@ -92,22 +90,22 @@ export class IndexComponent implements OnInit {
     this.stage.batchDraw();
   }
 
-  createNode(isDrawTemp = false) {
+  createNode() {
     switch (this.selectedTool) {
       case ToolMode.Line:
-        this.createLineNode(isDrawTemp);
+        this.createLineNode();
         break;
       case ToolMode.Arrow:
-        this.createArrowNode(isDrawTemp);
+        this.createArrowNode();
         break;
       case ToolMode.Rect:
-        this.createRectNode(isDrawTemp);
+        this.createRectNode();
         break;
       case ToolMode.Circle:
-        this.createCircleNode(isDrawTemp);
+        this.createCircleNode();
         break;
       case ToolMode.Text:
-        this.createTextNode(isDrawTemp);
+        this.createTextNode();
         break;
     }
   }
@@ -127,8 +125,8 @@ export class IndexComponent implements OnInit {
           this.isMouseDown = false;
           this.destroyTempNode();
           if (noTransFormer) {
-            const isDrawTemp = false;
-            this.createNode(isDrawTemp);
+            this.isDrawTemp = false;
+            this.createNode();
           }
         }
       });
@@ -146,8 +144,8 @@ export class IndexComponent implements OnInit {
         e.target instanceof Konva.Image
       ) {
         this.destroyTempNode();
-        const isDrawTemp = true;
-        this.createNode(isDrawTemp);
+        this.isDrawTemp = true;
+        this.createNode();
       }
     });
 
@@ -159,6 +157,7 @@ export class IndexComponent implements OnInit {
         if (this.selectNode instanceof Konva.Text) {
           const textArea = document.querySelector('textarea');
           if (textArea) {
+            console.log('textArea', textArea.value);
             this.selectNode.text(textArea.value);
             this.editorLayer.batchDraw();
             container.removeChild(textArea);
@@ -187,6 +186,25 @@ export class IndexComponent implements OnInit {
     });
   }
 
+  addTextNodeListener(textNode: Konva.Text) {
+    const container = document.querySelector('#container');
+    textNode.on('dblclick', (e) => {
+      const node = e.currentTarget as Konva.Text;
+
+      // create textarea and style it
+      const textElement = document.createElement('textarea');
+      container.appendChild(textElement);
+      textElement.value = node.text();
+      textElement.style.position = 'absolute';
+      textElement.style.top = node.y() + 'px',
+      textElement.style.left = node.x() + 'px',
+      textElement.style.width = node.width() + 'px';
+      textElement.style.height = node.height() + 'px';
+      textElement.style.fontSize = 20 + 'px';
+      textElement.focus();
+    });
+  }
+
   startDragTrack() {
     const pos = this.stage.getPointerPosition();
     this.dragTrack = [{x: pos.x, y: pos.y}];
@@ -194,11 +212,11 @@ export class IndexComponent implements OnInit {
 
   updateDragTrack() {
     const pos = this.stage.getPointerPosition();
-    this.dragTrack.push({x: pos.x, y: pos.y});
+    this.dragTrack = [_.first(this.dragTrack), {x: pos.x, y: pos.y}];
   }
 
-
-  getShapeInfo(dragTrack) {
+  getDragTrackPostionRect() {
+    const dragTrack = this.dragTrack;
     const posStart = _.first(dragTrack);
     const posEnd = _.last(dragTrack);
     let r1x = posStart.x;
@@ -219,56 +237,50 @@ export class IndexComponent implements OnInit {
     return ({x1: r1x, y1: r1y, x2: r2x, y2: r2y});
   }
 
-  createRectNode(isDrawTemp) {
-    const shape = this.getShapeInfo(this.dragTrack);
-    const node = new Konva.Rect({
-      x: shape.x1,
-      y: shape.y1,
-      width: shape.x2 - shape.x1,
-      height: shape.y2 - shape.y1,
-      stroke: 'black',
-      strokeWidth: 2
-    });
-    if (isDrawTemp) {
-      node.name('temp');
-    }
-    this.addNodeListener(node);
-    this.editorLayer.add(node);
-    this.stage.batchDraw();
-  }
-
-  createCircleNode(isDrawTemp) {
-    const shape = this.getShapeInfo(this.dragTrack);
-    const node = new Konva.Circle({
-      x: shape.x1,
-      y: shape.y1,
-      radius: shape.x2 - shape.x1,
-      stroke: 'black',
-      strokeWidth: 2
-    });
-    if (isDrawTemp) {
-      node.name('temp');
-    }
-    this.addNodeListener(node);
-    this.editorLayer.add(node);
-    this.stage.batchDraw();
-  }
-
-  createLineNode(isDrawTemp) {
-    this.dragTrack = [
-      _.first(this.dragTrack),
-      _.last(this.dragTrack),
-    ];
+  getDragTrackPoints() {
     const trackPoints = _.flatMap(this.dragTrack, track => {
       return [track.x , track.y];
     });
-    const node = new Konva.Line({
-      points: trackPoints,
-      stroke: 'black'
+    return trackPoints;
+  }
+
+  createRectNode() {
+    const posRect = this.getDragTrackPostionRect();
+    const node = new Konva.Rect({
+      x: posRect.x1,
+      y: posRect.y1,
+      width: posRect.x2 - posRect.x1,
+      height: posRect.y2 - posRect.y1,
+      stroke: 'black',
+      strokeWidth: 2,
+      name: (this.isDrawTemp) ? 'temp': ''
     });
-    if (isDrawTemp) {
-      node.name('temp');
-    }
+    this.addNodeListener(node);
+    this.editorLayer.add(node);
+    this.stage.batchDraw();
+  }
+
+  createCircleNode() {
+    const posRect = this.getDragTrackPostionRect();
+    const node = new Konva.Circle({
+      x: posRect.x1,
+      y: posRect.y1,
+      radius: posRect.x2 - posRect.x1,
+      stroke: 'black',
+      strokeWidth: 2,
+      name: (this.isDrawTemp) ? 'temp': ''
+    });
+    this.addNodeListener(node);
+    this.editorLayer.add(node);
+    this.stage.batchDraw();
+  }
+
+  createLineNode() {
+    const node = new Konva.Line({
+      points: this.getDragTrackPoints(),
+      stroke: 'black',
+      name: (this.isDrawTemp) ? 'temp': ''
+    });
     if (node.width() > 0) {
       this.addNodeListener(node);
       this.editorLayer.add(node);
@@ -276,22 +288,12 @@ export class IndexComponent implements OnInit {
     }
   }
 
-  createArrowNode(isDrawTemp) {
-    this.dragTrack = [
-      _.first(this.dragTrack),
-      _.last(this.dragTrack),
-    ];
-    const trackPoints = _.flatMap(this.dragTrack, track => {
-      return [track.x , track.y];
-    });
+  createArrowNode() {
     const node = new Konva.Arrow({
-      points: trackPoints,
+      points: this.getDragTrackPoints(),
       stroke: 'black',
-      fill: 'black'
+      name: (this.isDrawTemp) ? 'temp': ''
     });
-    if (isDrawTemp) {
-      node.name('temp');
-    }
     if (node.width() > 15) {
       this.addNodeListener(node);
       this.editorLayer.add(node);
@@ -299,15 +301,15 @@ export class IndexComponent implements OnInit {
     }
   }
 
-  createTextNode(isDrawTemp) {
-    const shape = this.getShapeInfo(this.dragTrack);
+  createTextNode() {
+    const posRect = this.getDragTrackPostionRect();
     let nodeConfig = {
-      x: shape.x1,
-      y: shape.y1,
-      width: shape.x2 - shape.x1,
-      height: shape.y2 - shape.y1,
+      x: posRect.x1,
+      y: posRect.y1,
+      width: posRect.x2 - posRect.x1,
+      height: posRect.y2 - posRect.y1,
     };
-    if (isDrawTemp) {
+    if (this.isDrawTemp) {
       nodeConfig = Object.assign(nodeConfig, {
         stroke: 'black',
         name: 'temp',
@@ -329,29 +331,15 @@ export class IndexComponent implements OnInit {
     this.stage.batchDraw();
   }
 
-  addTextNodeListener(textNode: Konva.Text) {
-    const container = document.querySelector('#container');
-    textNode.on('dblclick', (e) => {
-      const node = e.currentTarget as Konva.Text;
-
-      // create textarea and style it
-      const textElement = document.createElement('textarea');
-      container.appendChild(textElement);
-      textElement.value = node.text();
-      textElement.style.position = 'absolute';
-      textElement.style.top = node.y() + 'px',
-      textElement.style.left = node.x() + 'px',
-      textElement.style.width = node.width() + 'px';
-      textElement.style.height = node.height() + 'px';
-      textElement.style.fontSize = 20 + 'px';
-      textElement.focus();
-    });
-  }
-
   resetContext() {
     this.editorLayer.destroy();
     this.editorLayer = new Konva.Layer({name: 'EditedContext'});
     this.stage.add(this.editorLayer);
+  }
+
+  saveAsImage() {
+    const dataURL = this.stage.toDataURL();
+    this.downloadURI(dataURL, `stage_${this.getNowTimeString()}.png`);
   }
 
   downloadURI(uri, name) {
@@ -361,11 +349,6 @@ export class IndexComponent implements OnInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }
-
-  saveAsImage() {
-    const dataURL = this.stage.toDataURL();
-    this.downloadURI(dataURL, `stage_${this.getNowTimeString()}.png`);
   }
 
   getNowTimeString() {
